@@ -36,16 +36,16 @@ config="/usr/local/etc/server-create/server-create.conf"
 
 
 
-# ACTUAL SCRIPT STARTS HERE!!!
+# - - - - - ACTUAL SCRIPT STARTS HERE!!! - - - - -
 
-# INITIAL
+# - - - - - INITIAL - - - - -
 echo -e "Using ${program_name}, version ${version}."
 echo -e "\033[31mCAUTION! This script requires sudo privileges; mistyped file paths, etc. may cause file loss and other problems!\033[0m"
 echo ""
 echo "Using default configuration file. Config is located at $config"
 echo ""
 
-# SITEKEY AND MYSQL PASSWORD
+# - - - - - SITEKEY AND MYSQL PASSWORD - - - - -
 # read sitekey
 echo -e "Enter website name to create (example: \"yourwebsite.com\")"
 read sitekey_raw
@@ -64,6 +64,30 @@ else
 fi
 # ask for mysql root password
 echo "Enter MySQL database root-user password:"
-read -s root_dbpassword
+read -s mysql_root_dbpassword
 echo "Entered!"
 
+# - - - - - MYSQL DATABASE - - - - -
+# make mysql variables
+mysql_root_user="root"
+mysql_database="${sitekey}_wordpress"
+mysql_database_user="${sitekey}_wpuser"
+mysql_database_password="${sitekey}pw1"
+# create mysql database
+mysql_makedb="CREATE DATABASE IF NOT EXISTS $mysql_database; CREATE USER '$mysql_database_user' IDENTIFIED BY 'mysql_database_password'; GRANT ALL PRIVILEGES ON ${mysql_database}.* TO '$mysql_database_user'; FLUSH PRIVILEGES;"
+sudo mysql --user="$mysql_root_user" --password="$mysql_root_password" --execute="$mysql_makedb"
+
+# - - - - - WORDPRESS FILES - - - - -
+# html root directory (typically /var/www/html)
+html_root="/var/www/html"
+# create sitekey folders
+sudo mkdir -p $html_root/$sitekey/public_html
+# copy template files to new wordpress directory
+sudo cp -r $html_root/TEMPLATE/wordpress/* $html_root/$sitekey/public_html
+# modify wp-config.php to include sitekey
+sudo sed -i 's/!!KEY!!/sitekey/g' $html_root/$sitekey/public_html/wp-config.php
+
+# - - -
+
+# unset mysql password (PLACE AFTER ALL MYSQL COMMANDS)
+unset mysql_root_dbpassword
