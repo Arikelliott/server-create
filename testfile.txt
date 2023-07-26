@@ -1,1 +1,1 @@
-this is a bob string
+this is a fred.com string

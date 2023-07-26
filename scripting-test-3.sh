@@ -1,5 +1,6 @@
 # #! /bin/bash
 
-bob=bob
-joe="${bob}by joe"
-echo $joe
+sitekey=fred
+toplevel_domain=.com
+bob=$sitekey\\$toplevel_domain
+echo $bob
