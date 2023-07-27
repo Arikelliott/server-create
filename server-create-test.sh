@@ -5,36 +5,6 @@ version=v0.0.1
 config="/usr/local/etc/server-create/server-create.conf"
 
 
-# Structure:
-    # warning about dangers of using script
-    # mention location of config file
-    # ask for sitekey name
-    # ask for mysql root password
-
-    # make html website folder, then public_html folder
-    # make mysql database for website, then website user/password. grant privileges to user for database.
-    # copy wordpress template files to website folder. modify wp-config.php for sitekey.
-    # copy initdb.sql, modify for sitekey. add to mysql database.
-    # copy apache template, modify for sitekey. run sitekey config. reload apache.
-
-
-
-
-
-
-# Variables:
-#     config location
-#     html folder (/var/www/html) c
-#     sitekey u
-#     root password u
-#     template location c
-#     initdb.sql location c
-#     apache folder (/etc/apache2/sites-available) c
-#     apache template c
-#     sitedomain u
-#     siteescapedomain u
-
-
 
 # - - - - - ACTUAL SCRIPT STARTS HERE!!! - - - - -
 
@@ -52,7 +22,7 @@ read sitekey_raw
 echo -e "Enter toplevel domain (example: \".com, .org, etc\")"
 read toplevel_domain
 # make sure sitekey has no ".com" at the end but sitedomain does
-sitekey=$(echo ${sitekey_raw} | sed "s/'$toplevel_domain'//g")
+sitekey=$(echo ${sitekey_raw} | sed "s/$toplevel_domain//g")
 sitedomain=$sitekey$toplevel_domain
 escapedomain=$sitekey\\$toplevel_domain
 # ask user if sitedomain is correct, exit if not
@@ -75,10 +45,12 @@ echo "Entered!"
 mysql_root_user="root"
 mysql_database="${sitekey}_wordpress"
 mysql_database_user="${sitekey}_wpuser"
-mysql_database_password="${sitekey}pw1"
+mysql_database_password="${sitekey}wp1"
 # create mysql database
-mysql_makedb="CREATE DATABASE IF NOT EXISTS $mysql_database; CREATE USER '$mysql_database_user' IDENTIFIED BY 'mysql_database_password'; GRANT ALL PRIVILEGES ON ${mysql_database}.* TO '$mysql_database_user'; FLUSH PRIVILEGES;"
+echo "Creating MySQL database."
+mysql_makedb="CREATE DATABASE IF NOT EXISTS $mysql_database; CREATE USER '$mysql_database_user' IDENTIFIED BY '$mysql_database_password'; GRANT ALL PRIVILEGES ON ${mysql_database}.* TO '$mysql_database_user'; FLUSH PRIVILEGES;"
 sudo mysql --user="$mysql_root_user" --password="$mysql_root_password" --execute="$mysql_makedb"
+echo "Database $mysql_database created!"
 
 # - - - - - WORDPRESS FILES - - - - -
 # html root directory (typically /var/www/html)
@@ -86,16 +58,17 @@ html_root="/var/www/html"
 # create sitekey folders
 sudo mkdir -p $html_root/$sitekey/public_html
 # copy template files to new wordpress directory
+echo "Creating Wordpress files at $html_root/$sitekey/public_html."
 sudo cp -vr $html_root/TEMPLATE/wordpress/* $html_root/$sitekey/public_html
 # modify wp-config.php to include sitekey
-sudo sed -i "s/!!KEY!!/'$sitekey'/g" $html_root/$sitekey/public_html/wp-config.php
+sudo sed -i "s/!!KEY!!/$sitekey/g" $html_root/$sitekey/public_html/wp-config.php
 
 # - - - - - IMPORT DATABASE TEMPLATE - - - - -
 # copy initdb.sql template
-sudo cp -v $html_root/initdb.sql $html_root/$sitekey/initdb.sql
+sudo cp -v $html_root/initdb.sql $html_root/$sitekey/public_html/initdb.sql
 # set sitekey and site domain in initdb.sql
-sudo sed -i "s/!!KEY!!/'$sitekey'/g" $html_root/$sitekey/public_html/initdb.sql
-sudo sed -i "s/!!DOMAIN!!/'$sitedomain'/g" $html_root/$sitekey/public_html/initdb.sql
+sudo sed -i "s/!!KEY!!/$sitekey/g" $html_root/$sitekey/public_html/initdb.sql
+sudo sed -i "s/!!DOMAIN!!/$sitedomain/g" $html_root/$sitekey/public_html/initdb.sql
 # add initdb.sql to mysql database
 mysql --user="$mysql_root_user" --password="$mysql_root_password" $mysql_database < $html_root/$sitekey/public_html/initdb.sql
 # unset mysql password (protects against reading the mysql database password)
@@ -107,9 +80,9 @@ apache_config="${sitekey}.conf"
 # copy apache template file
 sudo cp -v /etc/apache2/sites-available/TEMPLATE.conf /etc/apache2/sites-available/$apache_config
 # set sitekey, sitedomain, and escape domain in apache config
-sudo sed -i "s/!!KEY!!/'$sitekey'/g" /etc/apache2/sites-available/$apache_config
-sudo sed -i "s/!!DOMAIN!!/'$sitedomain'/g" /etc/apache2/sites-available/$apache_config
-sudo sed -i "s/!!ESCAPEDOMAIN!!/'$escapedomain'/g" /etc/apache2/sites-available/$apache_config
+sudo sed -i "s/!!KEY!!/$sitekey/g" /etc/apache2/sites-available/$apache_config
+sudo sed -i "s/!!DOMAIN!!/$sitedomain/g" /etc/apache2/sites-available/$apache_config
+sudo sed -i "s/!!ESCAPEDOMAIN!!/$escapedomain/g" /etc/apache2/sites-available/$apache_config
 # enable site
 sudo a2ensite $apache_config
 # reload apache
@@ -117,6 +90,6 @@ sudo systemctl reload apache2
 
 # - - - - - ENABLE SSL CERTIFICATE - - - - -
 # run certbot
-sudo certbot --apache
+sudo certbot --apache -d www.$sitedomain -d $sitedomain -v
 # reload apache
 sudo systemctl reload apache2
