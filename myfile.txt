@@ -1,3 +1,0 @@
-Age: 47
-Name: Frank
-Favorite food: pretzels
