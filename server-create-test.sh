@@ -1,19 +1,17 @@
 #! /bin/bash
 
-program_name="server-create.sh"
-version=v0.0.1
-config="/usr/local/etc/server-create/server-create.conf"
-
-
-
-# - - - - - ACTUAL SCRIPT STARTS HERE!!! - - - - -
 
 # - - - - - INITIAL - - - - -
+# ID Variables
+program_name="server-create.sh"
+version=v0.0.1
+# Print ID
 echo -e "Using ${program_name}, version ${version}."
 echo -e "\033[31mCAUTION! This script requires sudo privileges; mistyped file paths, etc. may cause file loss and other problems!\033[0m"
 echo ""
-echo "Using default configuration file. Config is located at $config"
-echo ""
+# --- CONFIG NOT MADE YET ---
+# echo "Using default configuration file. Config is located at $config"
+# echo ""
 
 # - - - - - SITEKEY AND MYSQL PASSWORD - - - - -
 # read sitekey
@@ -60,16 +58,22 @@ sudo mkdir -p $html_root/$sitekey/public_html
 # copy template files to new wordpress directory
 echo "Creating Wordpress files at $html_root/$sitekey/public_html."
 sudo cp -vr $html_root/TEMPLATE/wordpress/* $html_root/$sitekey/public_html
+echo "Done!"
 # modify wp-config.php to include sitekey
+echo "Modifying wp-config.php."
 sudo sed -i "s/!!KEY!!/$sitekey/g" $html_root/$sitekey/public_html/wp-config.php
 
 # - - - - - IMPORT DATABASE TEMPLATE - - - - -
 # copy initdb.sql template
+echo "Copying initdb.sql to Wordpress directory."
 sudo cp -v $html_root/initdb.sql $html_root/$sitekey/public_html/initdb.sql
+echo "Done!"
 # set sitekey and site domain in initdb.sql
+echo "Modifying initdb.sql."
 sudo sed -i "s/!!KEY!!/$sitekey/g" $html_root/$sitekey/public_html/initdb.sql
 sudo sed -i "s/!!DOMAIN!!/$sitedomain/g" $html_root/$sitekey/public_html/initdb.sql
 # add initdb.sql to mysql database
+echo "Adding initdb.sql template to MySQL database."
 mysql --user="$mysql_root_user" --password="$mysql_root_password" $mysql_database < $html_root/$sitekey/public_html/initdb.sql
 # unset mysql password (protects against reading the mysql database password)
 unset mysql_root_dbpassword
@@ -78,18 +82,27 @@ unset mysql_root_dbpassword
 # make apache variables
 apache_config="${sitekey}.conf"
 # copy apache template file
+echo "Copying Apache template config."
 sudo cp -v /etc/apache2/sites-available/TEMPLATE.conf /etc/apache2/sites-available/$apache_config
+echo "Done!"
 # set sitekey, sitedomain, and escape domain in apache config
+echo "Modifying Apache site config file."
 sudo sed -i "s/!!KEY!!/$sitekey/g" /etc/apache2/sites-available/$apache_config
 sudo sed -i "s/!!DOMAIN!!/$sitedomain/g" /etc/apache2/sites-available/$apache_config
 sudo sed -i "s/!!ESCAPEDOMAIN!!/$escapedomain/g" /etc/apache2/sites-available/$apache_config
 # enable site
+echo "Enabling ${sitedomain}."
 sudo a2ensite $apache_config
 # reload apache
+echo "Reloading apache2.service."
 sudo systemctl reload apache2
 
 # - - - - - ENABLE SSL CERTIFICATE - - - - -
 # run certbot
+echo "Enabling SSL certificates."
 sudo certbot --apache -d www.$sitedomain -d $sitedomain -v
 # reload apache
+echo "Reloading apache2.service."
 sudo systemctl reload apache2
+echo ""
+echo -e "\032[31mWebsite installation complete!\033[0m"
