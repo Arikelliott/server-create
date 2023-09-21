@@ -47,7 +47,7 @@ mysql_database_password="${sitekey}wp1"
 # create mysql database
 echo "Creating MySQL database."
 mysql_makedb="CREATE DATABASE IF NOT EXISTS $mysql_database; CREATE USER '$mysql_database_user' IDENTIFIED BY '$mysql_database_password'; GRANT ALL PRIVILEGES ON ${mysql_database}.* TO '$mysql_database_user'; FLUSH PRIVILEGES;"
-sudo mysql --user="$mysql_root_user" --password="$mysql_root_password" --execute="$mysql_makedb"
+mysql --user="$mysql_root_user" --password="$mysql_root_dbpassword" --execute="$mysql_makedb"
 echo "Database $mysql_database created!"
 
 # - - - - - WORDPRESS FILES - - - - -
